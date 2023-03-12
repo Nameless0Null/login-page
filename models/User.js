@@ -5,8 +5,7 @@ const jwt = require('jsonwebtoken');
 
 const userSchema = mongoose.Schema({
     name: {
-        type: String,
-        maxlength: 50
+        type: String
     },
     email: {
         type: String,
@@ -17,15 +16,10 @@ const userSchema = mongoose.Schema({
         type: String,
         minlength: 5
     },
-    lastname: {
-        type: String,
-        maxlength: 50
-    },
     role: {
         type: Number,
         default: 0
     },
-    image: String,
     token: {
         type: String
     },
@@ -68,7 +62,7 @@ userSchema.methods.generateToken = function(cb) {
     var token = jwt.sign(user._id.toHexString(), 'secretToken')
 
     // user._id+'secretToken' = token
-    // ->
+    // 넣으면
     // 'secretToken' -> user.)id
 
     user.token = token

@@ -1,0 +1,18 @@
+doctype html
+html 
+    head
+        meta(charset='utf-8')
+        title Signup
+    body
+        form(action='/signup' method='post')
+            p
+                h2 email:
+                input(type='text' name='email' placeholder='example@gmail.com')
+            p 
+                h2 name:
+                input(type='text' name='name' placeholder='name')
+            p 
+                h2 password:
+                input(type='password' name='password' placeholder='password')
+            p
+                button Sign Up 

@@ -4,8 +4,10 @@ const port = 3000;
 
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 
 const {User} = require("./models/User");
+//const {auth} = require("./middleware/auth");
 
 //application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({extended: true}));
@@ -15,20 +17,27 @@ app.use(bodyParser.json());
 
 app.use(cookieParser());
 
+app.set('views', './views');
+app.set('view engine', 'jade');
+
+app.use(express.static(path.join(__dirname, 'views')));
+
 const config = require('./config/key')
 const mongoose = require('mongoose')
 mongoose.connect(config.mongoURI)
 .then(() => console.log('MongoDB Connected...'))
 .catch(err => console.log(err))
 
+app.get('/signup', (req, res) => {
+    res.render('signup');
+})
 
-
-app.get('/', (req, res) => res.send('Hello Wolrd!'));
-
-app.post('/register', (req, res) => {
+app.get('/login', (req, res) => {
+    res.render('login');
+})
+app.post('/signup', (req, res) => {
     //회원가입할 때 필요한 정보들을 client에서 가져오면
     //그것들을 데이터 베이스에 넣어준다.
-    
     const user = new User(req.body);
 
     // user.save((err, doc)=>{
@@ -52,7 +61,8 @@ app.post('/register', (req, res) => {
     
     user.save().then(()=>{
         return res.status(200).json({
-            success: true
+            success: true,
+            message: "Signed success"
             });
     }).catch((err)=>{
         console.log(err);
@@ -88,9 +98,9 @@ app.post('/login', (req, res) => {
                 if(err) return res.status(400).send(err);
     
                 //토큰을 저장한다. 쿠키, 로컬스토리지 등에 저장할 수 있다.
-                res.cookie("x_auth", user.token)
+                res.cookie("auth", user.token)
                 .status(200)
-                .json({loginSuccess: true, userId: user._id})
+                .json({loginSuccess: true, userId: user._id, message: `환영합니다${user._id}`})
             })
         
         })
@@ -102,4 +112,13 @@ app.post('/login', (req, res) => {
     //비밀번호 맞으면 토큰 생성
 })
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+
+//?
+// app.get('/api/users/auth', auth, (req, res => {
+
+// }))
+
+
+
+app.listen(port, () => console.log(`istening on port ${port}!`));

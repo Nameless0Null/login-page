@@ -56,7 +56,8 @@ userSchema.pre('save', function(next){ //function이 끝난 후 user.save(())으
 userSchema.methods.comparePassword = function(plainPassword, cb){
     //plainPassword를 암호화한후 저장돼있는 암호화된 비밀번호와 비교
     bcrypt.compare(plainPassword, this.password, function(err, isMatch){
-        if(err) return cb(err),
+        if(err) return cb(err);
+        console.log(plainPassword+','+this.password);
         cb(null, isMatch)
     })
 }
@@ -71,8 +72,14 @@ userSchema.methods.generateToken = function(cb) {
     // 'secretToken' -> user.)id
 
     user.token = token
-    user.save(function(err, user){
-        if(err) return cb(err)
+
+    // user.save(function(err, user){
+    //     if(err) return cb(err);
+    //     cb(null, user)
+    // })
+    user.save().catch((err)=>{
+        console.log(err);
+    }).then((user)=>{
         cb(null, user)
     })
 }

@@ -78,8 +78,10 @@ app.post('/login', (req, res) => {
         }
         //이메일 있으면 비밀번호 맞는지 확인하고
         user.comparePassword(req.body.password, (err, isMatch) => {
-            if(!isMatch)
-            return res.json({loginSuccess: false, message: "비밀번호가 틀렸습니다."})
+            if(!isMatch) {
+                return res.json({loginSuccess: false, message: "비밀번호가 틀렸습니다."});    
+            }
+            // return res.json({loginSuccess: false, message: "비밀번호가 틀렸습니다."});
             
             //비밀번호가 맞다면 토큰 생성
             user.generateToken((err, user) => {

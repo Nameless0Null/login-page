@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 
 const {User} = require("./models/User");
-//const {auth} = require("./middleware/auth");
+const {auth} = require("./middleware/auth");
 
 //application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({extended: true}));
@@ -98,7 +98,7 @@ app.post('/login', (req, res) => {
                 if(err) return res.status(400).send(err);
     
                 //토큰을 저장한다. 쿠키, 로컬스토리지 등에 저장할 수 있다.
-                res.cookie("auth", user.token)
+                res.cookie("x_auth", user.token)
                 .status(200)
                 .json({loginSuccess: true, userId: user._id, message: `환영합니다${user._id}`})
             })
@@ -108,17 +108,32 @@ app.post('/login', (req, res) => {
     .catch((err) => {
         console.log(err);
     })
-
     //비밀번호 맞으면 토큰 생성
 })
 
+//role 0 일반유저       role 0이 아니면 관리자
+app.get('/api/users/auth', auth, (req, res) => {
+    //여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication 이 true
+    res.status(200).json({
+        _id: req.user._id,
+        isAdmin: req.user.role === 0 ? false : true,
+        isAuth: true,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role
+    })
+})
 
+app.get('/api/users/logout', auth, (req, res) => {
+    User.findOneAndUpdate({_id: req.user._id}, {toekn: ""})
+    .catch((err)=>{
+        return res.json({success: false, err});
+    })
+    .then((user)=>{
+        return res.status(200).send({
+            success: true
+        })
+    })
+})
 
-//?
-// app.get('/api/users/auth', auth, (req, res => {
-
-// }))
-
-
-
-app.listen(port, () => console.log(`istening on port ${port}!`));
+app.listen(port, () => console.log(`listening on port ${port}!`));

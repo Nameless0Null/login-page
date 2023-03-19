@@ -63,7 +63,7 @@ userSchema.methods.generateToken = function(cb) {
 
     // user._id+'secretToken' = token
     // 넣으면
-    // 'secretToken' -> user.)id
+    // 'secretToken' -> user._id
 
     user.token = token
 

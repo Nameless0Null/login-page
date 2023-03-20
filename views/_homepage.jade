@@ -1,0 +1,31 @@
+asdf = functinon templateHTML(title, list, body, control){
+    HTML:function(title, list, body, control){
+        return `
+    <!doctype html>
+    <html>
+    <head>
+        <title>HomePage-${title}</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>Homepage</h1>
+        form(action='/homepage')
+        //- <p>
+        //-     ${list}
+        //-     <a href="">
+        //-     ${body}
+        //- </p>
+        <p>
+            button(type="button" onclick="location.href='http://localhost:3000/api/users/logout'") 로그아웃
+        </p>
+    </body>
+    </html>
+    `;
+    },
+    list:function(filelist){
+        var list = '<ul>'
+
+    }
+}
+
+module.exports('asdf');

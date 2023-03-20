@@ -6,6 +6,9 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
+var fs = require('fs');
+var url = require('url');
+var helmet = require('helmet');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 
@@ -17,7 +20,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 //application.jsongit 
 app.use(bodyParser.json());
-
+app.use(helmet());
 app.use(cookieParser());
 
 app.set('views', './views');
@@ -25,15 +28,28 @@ app.set('view engine', 'jade');
 
 app.use(express.static(path.join(__dirname, 'views')));
 
-var passport = require('passport')
-, LocalStrategy = require('passport-local')
-.Strategy;
+// var passport = require('passport')
+// , LocalStrategy = require('passport-local')
+// .Strategy;
 
 const config = require('./config/key')
 const mongoose = require('mongoose')
 mongoose.connect(config.mongoURI)
 .then(() => console.log('MongoDB Connected...'))
 .catch(err => console.log(err))
+
+
+//나중에 홈페이지에 방명록 구현할 때 사용할 함수
+// function templateList(filelist){
+//     var list = `<ul>`;
+//     var i =0;
+//     while(i<filelist.length){
+//         list = list + `<li><a href="/?name=${filelist[i]}">${filelist[i]}</a></li>`;
+//         i += 1;
+//     }
+//     list = list + `</ul>`;
+//     return list;
+// }
 
 app.get('/signup', (req, res) => {
     res.render('signup');
@@ -43,9 +59,34 @@ app.get('/login', (req, res) => {
     res.render('login');
 })
 app.get('/homepage', (req, res) => {
+    // var _url = request.url;
+    // var queryData = url.parse(_url, true).query;
+    // var pathname = url.parse(_url, true).pathname;
+    // console.log(pathname);
+    // if(queryData.name === undefined){
+    // }
     res.render('homepage');
+
+
+    //나중에 홈페이지에 방명록 구현할 때 사용할 함수
+    // if(pathname ==='/homepage'){
+    //     if(queryData.name === undefined){
+    //         fs.readdir('./data', function(err, filelist){
+    //             var title = 'Welcome';
+    //             var description = 'Please login';
+    //             var list = templateList(filelist);
+    //             var template = templateHTML(title, list,
+    //                 `<h2>${title}</h2>${description}
+    //                 form(action='/homepage')
+    //                     <p>
+    //                         button(type="button" onclick="location.href='http://localhost:3000/login'") 로그인 페이지로 이동
+    //                     </p>`
+    //                 );
+    //         })
+    //     }
+    // }
 })
-app.post('/signup', (req, res) => {
+app.post('/signup_page', (req, res) => {
     //회원가입할 때 필요한 정보들을 client에서 가져오면
     //그것들을 데이터 베이스에 넣어준다.
     // res.render('signup');
@@ -83,7 +124,7 @@ app.post('/signup', (req, res) => {
                 //     success: true,
                 //     message: "Signed success"
                 //     });
-                return res.redirect('/login');
+                return res.status(200).redirect('/login');
                 
             }).catch((err)=>{
                 console.log(err);
@@ -92,8 +133,8 @@ app.post('/signup', (req, res) => {
     }) 
 });
 
-/*
-app.post('/login', (req, res) => {
+
+app.post('/login_page', (req, res) => {
     //요청한 이메일을 데이터베이스에 있는지 찾고
     // User.findOne({email: req.body.email}, (err, user)=>{
     //     if(!user){
@@ -109,7 +150,7 @@ app.post('/login', (req, res) => {
             //     loginSuccess: false, 
             //     message: "이메일 검색 실패"
             // })
-            return res.redirect('/login');
+            return res.status(200).redirect('/login');
         }
         //이메일 있으면 비밀번호 맞는지 확인하고
         user.comparePassword(req.body.password, (err, isMatch) => {
@@ -134,13 +175,13 @@ app.post('/login', (req, res) => {
     })
     //비밀번호 맞으면 토큰 생성
 })
-*/
 
-app.post('/login', 
-passport.authenticate('local', {
-    successRdeirect: '/homepage', 
-    failureRedirect: '/login'
-}));
+
+// app.post('/login', 
+// passport.authenticate('local', {
+//     successRdeirect: '/homepage', 
+//     failureRedirect: '/login'
+// }));
 
 //role 0 일반유저       role 0이 아니면 관리자
 app.get('/api/users/auth', auth, (req, res) => {
@@ -163,7 +204,7 @@ app.get('/api/users/logout', auth, (req, res) => {
         return res.json({success: false, err});
     })
     .then((user)=>{
-        return res.status(200).send({
+        return res.cookie("x_auth", user.token).status(200).send({
             success: true
         })
     })
@@ -198,6 +239,9 @@ app.get('/api/users/logout', auth, (req, res) => {
 //       });
 //     }));
 //   };
-  
 
 app.listen(port, () => console.log(`listening on port ${port}!`));
+
+
+
+      

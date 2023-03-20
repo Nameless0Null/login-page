@@ -5,12 +5,38 @@ const port = 3000;
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const bcrypt = require('bcrypt');
+
+const session = require('express-session');
+const fileStore = require('session-file-store')(session);
+app.use(session({
+    secret: 'My secret!',
+    resave: false,
+    saveUninitialized: false,
+    cookie:{
+        maxAge : 60*60
+    },
+    store: new fileStore()
+}))
+
 
 var fs = require('fs');
 var url = require('url');
-var helmet = require('helmet');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+
+app.use(bodyParser.json());
+
+app.use(cookieParser('My secret'));
+
+app.set('views', './views');
+app.set('view engine', 'jade');
+
+app.use(express.static(path.join(__dirname, 'views')));
+
+const config = require('./config/key')
+const mongoose = require('mongoose')
+mongoose.connect(config.mongoURI)
+.then(() => console.log('MongoDB Connected...'))
+.catch(err => console.log(err))
 
 const {User} = require("./models/User");
 const {auth} = require("./middleware/auth");
@@ -18,25 +44,53 @@ const {auth} = require("./middleware/auth");
 //application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({extended: true}));
 
+var loginRouter = require('./routes/login');
+
+
+var passport = require('passport')
+, LocalStrategy = require('passport-local')
+.Strategy;
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(new LocalStrategy({
+    usernameField: 'email',
+    passwordField: 'password',
+    session: true,
+}, (input_id, input_pw, done) => {
+    User.findOne({email: input_id})
+    .catch((err) => {
+        if(err) return done(error);
+    }).then((user)=>{
+        if(!user) {
+            console.log('로그인 실패, 아이디 없음');
+            return done(null, false, {message: '존재하지 않는 아이디'});
+        }
+        user.comparePassword(input_pw, (err, isMatch) => {
+            if(!isMatch) {
+                return done(null, false, {message: '비번 틀림'});    
+            } else {
+                console.log('로그인 성공');
+                user.generateToken((err, user) => {
+                    if(err) return res.status(400).send(err);
+                })
+                return done(null, user)
+            }
+        })
+    })
+}))
+
+app.post('/api/users/login_page', passport.authenticate('local', {
+    failureRedirect: '/login'
+}), (req, res) => {
+    passport.serializeUser((user, done) => {
+        done(null, user.token);
+    }
+)}
+)
+
 //application.jsongit 
-app.use(bodyParser.json());
-app.use(helmet());
-app.use(cookieParser());
-
-app.set('views', './views');
-app.set('view engine', 'jade');
-
-app.use(express.static(path.join(__dirname, 'views')));
-
-// var passport = require('passport')
-// , LocalStrategy = require('passport-local')
-// .Strategy;
-
-const config = require('./config/key')
-const mongoose = require('mongoose')
-mongoose.connect(config.mongoURI)
-.then(() => console.log('MongoDB Connected...'))
-.catch(err => console.log(err))
 
 
 //나중에 홈페이지에 방명록 구현할 때 사용할 함수
@@ -49,6 +103,12 @@ mongoose.connect(config.mongoURI)
 //     }
 //     list = list + `</ul>`;
 //     return list;
+// }
+
+// const cookieConfig = {
+//     maxAge : 1000*60*60*24,
+//     httpOnly : false,
+//     signed: true
 // }
 
 app.get('/signup', (req, res) => {
@@ -66,8 +126,6 @@ app.get('/homepage', (req, res) => {
     // if(queryData.name === undefined){
     // }
     res.render('homepage');
-
-
     //나중에 홈페이지에 방명록 구현할 때 사용할 함수
     // if(pathname ==='/homepage'){
     //     if(queryData.name === undefined){
@@ -86,7 +144,8 @@ app.get('/homepage', (req, res) => {
     //     }
     // }
 })
-app.post('/signup_page', (req, res) => {
+
+app.post('/api/users/signup_page', (req, res) => {
     //회원가입할 때 필요한 정보들을 client에서 가져오면
     //그것들을 데이터 베이스에 넣어준다.
     // res.render('signup');
@@ -124,7 +183,7 @@ app.post('/signup_page', (req, res) => {
                 //     success: true,
                 //     message: "Signed success"
                 //     });
-                return res.status(200).redirect('/login');
+                return res.status(200).redirect('/api/users/login');
                 
             }).catch((err)=>{
                 console.log(err);
@@ -133,69 +192,25 @@ app.post('/signup_page', (req, res) => {
     }) 
 });
 
-
-app.post('/login_page', (req, res) => {
-    //요청한 이메일을 데이터베이스에 있는지 찾고
-    // User.findOne({email: req.body.email}, (err, user)=>{
-    //     if(!user){
-    //         return res.json({
-    //             loginSuccess: false, 
-    //             message: "이메일 검색 실패"
-    //         })
-    //     }
-    // })
-    User.findOne({email: req.body.email}).then((user) => {
-        if(!user){
-            // return res.json({
-            //     loginSuccess: false, 
-            //     message: "이메일 검색 실패"
-            // })
-            return res.status(200).redirect('/login');
-        }
-        //이메일 있으면 비밀번호 맞는지 확인하고
-        user.comparePassword(req.body.password, (err, isMatch) => {
-            if(!isMatch) {
-                return res.json({loginSuccess: false, message: "비밀번호가 틀렸습니다."});    
-            }
-            
-            //비밀번호가 맞다면 토큰 생성
-            user.generateToken((err, user) => {
-                if(err) return res.status(400).send(err);
-    
-                //토큰을 저장한다. 쿠키, 로컬스토리지 등에 저장할 수 있다.
-                res.cookie("x_auth", user.token)
-                .status(200)
-                .redirect('/homepage')
-            })
-        
-        })
-    })
-    .catch((err) => {
-        console.log(err);
-    })
-    //비밀번호 맞으면 토큰 생성
-})
+app.use('/api', loginRouter);
 
 
-// app.post('/login', 
-// passport.authenticate('local', {
-//     successRdeirect: '/homepage', 
-//     failureRedirect: '/login'
-// }));
 
 //role 0 일반유저       role 0이 아니면 관리자
 app.get('/api/users/auth', auth, (req, res) => {
     //여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication 이 true
-    res.status(200).json({
-        _id: req.user._id,
-        isAdmin: req.user.role === 0 ? false : true,
-        isAuth: true,
-        email: req.user.email,
-        name: req.user.name,
-        role: req.user.role
-    })
+    req.session._id = req.user.name;
+    req.session.us_logined = true;
+    // res.status(200).json({
+    //     _id: req.user._id,
+    //     isAdmin: req.user.role === 0 ? false : true,
+    //     isAuth: true,
+    //     email: req.user.email,
+    //     name: req.user.name,
+    //     role: req.user.role,
+    //     token: req.user.token
+    // })
 })
-
 
 app.get('/api/users/logout', auth, (req, res) => {
     User.findOneAndUpdate({_id: req.user._id}, {token: ""})
@@ -204,13 +219,17 @@ app.get('/api/users/logout', auth, (req, res) => {
         return res.json({success: false, err});
     })
     .then((user)=>{
-        return res.cookie("x_auth", user.token).status(200).send({
-            success: true
-        })
+        req.session.destroy((err)=>{
+            if(err) console.log(err);
+        });
+        res.clearCookie('sid');
+        res.cookie("x_auth", "").status(200).redirect('/login');
     })
 })
 
-
+// app.get('/api/users/cookie', (req, res) => {
+//     res.render("cookie");
+// })
 
 // module.exports = () => {
 //     passport.serializeUser((user, done) => { // Strategy 성공 시 호출됨

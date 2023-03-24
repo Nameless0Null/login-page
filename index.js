@@ -50,7 +50,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 var loginRouter = require('./routes/login');
 
 
-const Google_config = require('./config/google')
+const Google_config = require('./config/google');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const passportLocalMongoose = require("passport-local-mongoose");

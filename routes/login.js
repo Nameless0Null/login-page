@@ -5,8 +5,6 @@ var router = express.Router();
 
 const {User} = require("../models/User");
 
-const session = require('express-session');
-const fileStore = require('session-file-store')(session);
 // router.use(session({
 //     secret: 'My secret!',
 //     resave: false,
@@ -17,8 +15,9 @@ const fileStore = require('session-file-store')(session);
 //     store: new fileStore()
 // }))
 
-/*
+
 router.post('/users/login_page', (req, res) => {
+    /*
     //요청한 이메일을 데이터베이스에 있는지 찾고
     // User.findOne({email: req.body.email}, (err, user)=>{
     //     if(!user){
@@ -71,8 +70,23 @@ router.post('/users/login_page', (req, res) => {
         console.log(err);
     })
     //비밀번호 맞으면 토큰 생성
+    */
+
+    const user = new User({
+        email: req.body.email,
+        password: req.body.password
+    });
+    req.login(user, (err) => {
+        if(err) {
+            console.log(err);
+        } else {
+            Passport.authenticate("local")(req, res, () => {
+                res.redirect("/homepage")
+            })
+        }
+    })
 })
-*/
+
 
 /*
 app.post('/api/users/login_page', (req, res) => {
@@ -90,7 +104,8 @@ app.post('/api/users/login_page', (req, res) => {
             // return res.json({
             //     loginSuccess: false, 
             //     message: "이메일 검색 실패"
-            // })
+            // })  
+
             return res.status(200).redirect('/login');
         }
         //이메일 있으면 비밀번호 맞는지 확인하고

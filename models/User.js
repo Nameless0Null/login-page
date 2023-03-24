@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt'); //암호화모듈
 const saltRounds = 10; //sort를 만들 때 10자리를 만들어서 비밀번호를 암호화한다.
 const jwt = require('jsonwebtoken');
+const passportLocalMongoose = require("passport-local-mongoose");
 
 const userSchema = mongoose.Schema({
     name: {
@@ -107,6 +108,8 @@ userSchema.statics.findByToken = function(token, cb) {
     //     // decoded undefined
     //   });
 }
+
+userSchema.plugin(passportLocalMongoose);
 
 const User = mongoose.model('User', userSchema)
 

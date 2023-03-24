@@ -20,6 +20,8 @@ app.use(session({
 }))
 
 
+require('./auth_google');
+
 var fs = require('fs');
 var url = require('url');
 
@@ -37,6 +39,7 @@ const mongoose = require('mongoose')
 mongoose.connect(config.mongoURI)
 .then(() => console.log('MongoDB Connected...'))
 .catch(err => console.log(err))
+// mongoose.set('useCreateIndex', true);
 
 const {User} = require("./models/User");
 const {auth} = require("./middleware/auth");
@@ -47,13 +50,21 @@ app.use(bodyParser.urlencoded({extended: true}));
 var loginRouter = require('./routes/login');
 
 
-var passport = require('passport')
-, LocalStrategy = require('passport-local')
-.Strategy;
+const Google_config = require('./config/google')
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const passportLocalMongoose = require("passport-local-mongoose");
 
 app.use(passport.initialize());
 app.use(passport.session());
 
+passport.use(User.createStrategy());
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+
+/*
 passport.use(new LocalStrategy({
     usernameField: 'email',
     passwordField: 'password',
@@ -81,6 +92,7 @@ passport.use(new LocalStrategy({
     })
 }))
 
+
 app.post('/api/users/login_page', passport.authenticate('local', {
     failureRedirect: '/login'
 }), (req, res) => {
@@ -89,6 +101,7 @@ app.post('/api/users/login_page', passport.authenticate('local', {
     }
 )}
 )
+*/
 
 //application.jsongit 
 
@@ -111,12 +124,52 @@ app.post('/api/users/login_page', passport.authenticate('local', {
 //     signed: true
 // }
 
+
+function isLoggedIn(req, res, next) {
+    req.user ? next() : res.sendStatus(401);
+  }
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: [ 'email', 'profile' ] }
+  ));
+  
+  app.get( '/auth/google/callback',
+    passport.authenticate( 'google', {
+      successRedirect: '/protected',
+      failureRedirect: '/auth/google/failure'
+    })
+  );
+  
+  app.get('/protected', isLoggedIn, (req, res) => {
+    res.redirect('/homepagegoogle')
+  });
+  
+  app.get('/logout', (req, res) => {
+    req.logout(req.user, err => {
+        if(err) return next(err);
+        req.session.destroy();
+        res.redirect("/login");
+      });
+  });
+  
+  app.get('/auth/google/failure', (req, res) => {
+    res.send('Failed to authenticate..');
+  });
+
+
+app.get('/homepagegoogle', (req, res) => {
+    res.render('homepage_google');
+})
+
 app.get('/signup', (req, res) => {
     res.render('signup');
 })
 
 app.get('/login', (req, res) => {
     res.render('login');
+    //passport.authenticate('google', { scope: ['email'] });
 })
 app.get('/homepage', (req, res) => {
     // var _url = request.url;
@@ -125,7 +178,11 @@ app.get('/homepage', (req, res) => {
     // console.log(pathname);
     // if(queryData.name === undefined){
     // }
-    res.render('homepage');
+    if(req.isAuthenticated()){
+        res.render('homepage');
+    } else {
+        res.redirect("/login");
+    }
     //나중에 홈페이지에 방명록 구현할 때 사용할 함수
     // if(pathname ==='/homepage'){
     //     if(queryData.name === undefined){
@@ -145,12 +202,21 @@ app.get('/homepage', (req, res) => {
     // }
 })
 
-app.post('/api/users/signup_page', (req, res) => {
+
+/*
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/homepage');
+  });
+*/
+  app.post('/api/users/signup_page', (req, res) => {
     //회원가입할 때 필요한 정보들을 client에서 가져오면
     //그것들을 데이터 베이스에 넣어준다.
     // res.render('signup');
 
-
+/*
     const user = new User(req.body);
 
     // user.save((err, doc)=>{
@@ -190,9 +256,36 @@ app.post('/api/users/signup_page', (req, res) => {
             })
         }
     }) 
+    */
+    
+    User.register({email: req.body.email, name: req.body.name}, req.body.password, (err, user) => {
+        if(err){
+            console.log(err);
+            res.redirect("/signup");
+        } else {
+            passport.authenticate("local")(req, res, function(){
+                res.redirect("/homepage");
+            })
+        }
+       })
 });
 
-app.use('/api', loginRouter);
+//app.use('/api', loginRouter);
+app.post('/users/login_page', (req, res) => {
+    const user = new User({
+        email: req.body.email,
+        password: req.body.password
+    });
+    req.login(user, (err) => {
+        if(err) {
+            console.log(err);
+        } else {
+            Passport.authenticate("local")(req, res, () => {
+                res.redirect("/homepage")
+            })
+        }
+    })
+})
 
 
 
@@ -200,7 +293,7 @@ app.use('/api', loginRouter);
 app.get('/api/users/auth', auth, (req, res) => {
     //여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication 이 true
     req.session._id = req.user.name;
-    req.session.us_logined = true;
+    req.session.user_logined = true;
     // res.status(200).json({
     //     _id: req.user._id,
     //     isAdmin: req.user.role === 0 ? false : true,
@@ -213,6 +306,7 @@ app.get('/api/users/auth', auth, (req, res) => {
 })
 
 app.get('/api/users/logout', auth, (req, res) => {
+    /*
     User.findOneAndUpdate({_id: req.user._id}, {token: ""})
     .catch((err)=>{
         console.log(token);
@@ -225,6 +319,9 @@ app.get('/api/users/logout', auth, (req, res) => {
         res.clearCookie('sid');
         res.cookie("x_auth", "").status(200).redirect('/login');
     })
+    */
+   req.logout();
+   res.redirect('/login');
 })
 
 // app.get('/api/users/cookie', (req, res) => {

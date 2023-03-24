@@ -17,7 +17,7 @@ const {User} = require("../models/User");
 
 
 router.post('/users/login_page', (req, res) => {
-    /*
+    
     //요청한 이메일을 데이터베이스에 있는지 찾고
     // User.findOne({email: req.body.email}, (err, user)=>{
     //     if(!user){
@@ -70,8 +70,8 @@ router.post('/users/login_page', (req, res) => {
         console.log(err);
     })
     //비밀번호 맞으면 토큰 생성
-    */
-
+    
+/*
     const user = new User({
         email: req.body.email,
         password: req.body.password
@@ -85,6 +85,7 @@ router.post('/users/login_page', (req, res) => {
             })
         }
     })
+    */
 })
 
 

@@ -216,7 +216,7 @@ app.get('/auth/google/callback',
     //그것들을 데이터 베이스에 넣어준다.
     // res.render('signup');
 
-/*
+
     const user = new User(req.body);
 
     // user.save((err, doc)=>{
@@ -256,8 +256,8 @@ app.get('/auth/google/callback',
             })
         }
     }) 
-    */
-    
+
+    /*
     User.register({email: req.body.email, name: req.body.name}, req.body.password, (err, user) => {
         if(err){
             console.log(err);
@@ -267,7 +267,8 @@ app.get('/auth/google/callback',
                 res.redirect("/homepage");
             })
         }
-       })
+    })
+    */
 });
 
 //app.use('/api', loginRouter);
